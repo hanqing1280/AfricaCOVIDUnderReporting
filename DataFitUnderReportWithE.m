@@ -1,9 +1,9 @@
 %----------------------------Introduction------------------------------%
-% Countrywise Data Fit with EXPOSED STAGE
+% Countrywise Data Fit
 % Method: MCMC
 % Data Set: Reported Cumulative Cases + Reported New Cases
-% Input: Country Name (Mandantory)/ mindays (minimum days of data fitting)
-%        / setdays (Selected;defaultly not used)
+% Input: Country Name (Mandantory)/ mindays (minimum days of data fitting;
+%        default=9)/ setdays (Selected;defaultly not used)
 % Country Name are in:
 % 'Algeria''Angola''Benin''Botswana''BurkinaFaso''Burundi''Cameroon'
 % 'CapeVerde''CentralAfricanRepublic''Chad''Comoros''Congo''Cotedlvoire'
@@ -15,6 +15,7 @@
 % 'SouthAfrica''SouthSudan''Sudan''Tanzania''Togo''Tunisia''Uganda'
 % 'Zamibia''Zimbabwe'
 %----------------------------------------------------------------------%
+addpath('/Users/Qing/Desktop/IDRC/Under-report/Under-reporting MATLAB Codes/mcmcstat-master')
 
 clear model data params options
 load('AfricaCovidData');
@@ -23,8 +24,8 @@ load('AfricaCountryData');
 global country ck0 np days sigma gammas gammam gammaa nsimu paramstr nparam color mindays;
 
 %--------------Input----------------%
-country='CentralAfricanRepublic';% mandantory input
-mindays=10;% defaulty 10 minimun days is used
+country='Algeria';% mandantory input
+mindays=9;% default=9
 setdays=0;% selected input;defaultly not used
 %-----------------------------------%
 
@@ -61,7 +62,7 @@ nsimu=5000;% number of MCMC simulations
 paramstr={'R_0';'\rho_s';'\rho_a';'p_s';'p_a';'r_m';'E_0';'I_{m0}';'I_{s0}';'A_0';'R'};
 nparam=length(paramstr);
 
-theta00=[2.5,1,0.55,0.16,0.46,0.5,ck0,ck0,ck0,ck0,0]';
+theta00=[2.5,1,0.55,0.202,0.46,0.5,ck0,ck0,ck0,ck0,0]';
 [theta0,ss0]=fminsearch(@urmodelss,theta00,[],data)
 mse = ss0/(length(data.ydata)-nparam);
 
@@ -89,10 +90,12 @@ options.method= 'dram'; % adaptation method, 'mh', 'dr', 'am', or 'dram'
 options.adaptint= 500;    % how often to adapt the proposal
 
 [results,chain,s2chain] = mcmcrun(model,data,params,options);
-r=mean(chain(:,6)).*(1-mean(chain(:,4))-mean(chain(:,5)))+mean(chain(:,4));% overall report rate
+r=mean(chain(:,6)).*(1-mean(chain(:,5))).*(1-mean(chain(:,6)))+(1-mean(chain(:,5))).*mean(chain(:,4));% overall report rate
 
-
-chainstats(chain,results)
+stat=chainstats(chain,results)
+str_var=[country,'ChainStat'];
+eval([str_var,'=stat']);
+save('ChainStatistics.mat',[country,'ChainStat']);
 fprintf('r mean=%f\n',r);
 
 
@@ -105,20 +108,26 @@ mcmcplot(chain,[],results,'chainpanel')
 %mcmcplot(sqrt(s2chain),[],[],'dens',2)
 %title('Error Std')
 sgtitle(name);
-%saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Latex/',[country,'ParaPanelWithE.png']]);
+
 
 %-------Parameter Histogram Plot--------%
 figure(2);
 for i=1:nparam
     subplot(1,nparam,i)
-    histogram(chain(:,i),nsimu);
+    [counts,centers] = hist(chain(:,i),50);
+    b=bar(centers,counts/sum(counts),'k');
+    threshold=mean(chain(:,i));
+    yrange=get(gca,'ylim');
+    hold on;
+    plot([threshold threshold],yrange,'r-','LineWidth',1);
     title(paramstr{i},'FontSize',20);
 end
-sgtitle(name,'FontSize',30);
+sgtitle(name,'FontSize',26);
 set(gcf,'unit','centimeters','position',[3 5 55 10])
-%saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Latex/',[country,'ParaDensityWithE.png']]);
+saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Manuscript/',[country,'ParaDensityWithE.png']]);
 
-%------------Fit Plot (NO CI)--------------%
+
+%------------Fit Plot (NO HDI)--------------%
 figure(3);
 [t,y]=urmodel(data.time,mean(chain));
 plot(data.time,data.ydata(:,2),'o','Color',color(1,:),'LineWidth',2);
@@ -138,7 +147,7 @@ title(name,'FontSize',42);
 set(gcf,'unit','centimeters','position',[10 15 20 15]);
 %saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Latex/',[country,'FitWithE.png']]);
 
-%------------Fit Plot (WITH CI)--------------%
+%------------Fit Plot (WITH HDI)--------------%
 figure(4);
 [t,y]=urmodel(data.time,mean(chain));
 out = mcmcpred(results,chain,s2chain,data,@urmodelik,500);
@@ -160,7 +169,7 @@ xlabel('Date','FontSize',30);ylabel('Cases','FontSize',30);
 legend('95% HDI','Modeled I_K','95% HDI','Modeled C_K','Data C_K','Data I_K','FontSize',20,'Location','northwest');
 title(name,'FontSize',42);
 set(gcf,'unit','centimeters','position',[10 15 20 15]);
-%saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Latex/',[country,'FitWithE.png']]);
+
 
 %---------Predictive Envelop Plot for Cumulative Cases----------%
 figure(5);
@@ -189,6 +198,7 @@ figure(6);
 mcmcplot(chain,[],results.names,'acf',100)
 sgtitle(name);
 set(gcf,'unit','centimeters','position',[3 5 30 40])
+
 
 %-------------------------------Functions------------------------------------%
 function ss=urmodelss(theta,data)
@@ -223,16 +233,16 @@ imod=y(:,3)*sigma;
 end
 
 function [t,y]=urmodel(time,theta)
-global ck0 gammas gammam gammaa np sigma;
-y0(3)=theta(7);
-y0(4)=theta(8);
-y0(5)=theta(9);
-y0(6)=theta(10);
-y0(2)=ck0;
-y0(1)=sum(theta(8:11));
+global ck0 np sigma;
+y0(3)=theta(7)/np;
+y0(4)=theta(8)/np;
+y0(5)=theta(9)/np;
+y0(6)=theta(10)/np;
+y0(2)=ck0/np;
+y0(1)=sum(theta(8:11))/np;
 [t,yy]=ode45(@urode,time,y0,[],theta);
-ik=(theta(6)*(1-theta(4)-theta(5))+theta(4))*sigma*yy(:,3);
-y=[yy ik];
+ik=(theta(6)*(1-theta(4))*(1-theta(5))+(1-theta(5))*theta(4))*sigma*yy(:,3);
+y=[yy ik]*np;
 end
 
 
@@ -247,7 +257,7 @@ rhoa=theta(3);
 ps=theta(4);
 pa=theta(5);
 rm=theta(6);
-beta=R0./((ps*rhos)./gammas+(1-ps-pa)./gammam+(pa*rhoa)./gammaa);
+beta=R0./(((1-pa)*ps*rhos)./gammas+(1-ps)*(1-pa)./gammam+(pa*rhoa)./gammaa);
 
 
 % variables
@@ -260,10 +270,10 @@ a=y(6);
 
 % define the ODE
 dy(1)=sigma*e;
-dy(2)=rm*(1-ps-pa)*sigma*e+ps*sigma*e;
+dy(2)=rm*(1-pa)*(1-ps)*sigma*e+(1-pa)*ps*sigma*e;
 dy(3)=beta*(1-(e+ci)./np)*(rhos*is+im+rhoa*a)-sigma*e;
-dy(4)=(1-ps-pa)*sigma*e-gammam*im;
-dy(5)=ps*sigma*e-gammas*is;
+dy(4)=(1-ps)*(1-pa)*sigma*e-gammam*im;
+dy(5)=(1-pa)*ps*sigma*e-gammas*is;
 dy(6)=pa*sigma*e-gammaa*a;
 
 dy=dy(:);

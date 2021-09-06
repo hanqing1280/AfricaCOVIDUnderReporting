@@ -68,8 +68,8 @@ for i=1:ncountry
     {'R_0',                theta00(1),   1,     3.9}
     {'\rho_s',             theta00(2),   1,     1.5}
     {'\rho_a',             theta00(3),   0,     1}
-    {'p_s',                theta00(4),   0,     0.264}
-    {'p_a',                theta00(5),   0,     0.736}
+    {'p_s',                theta00(4),   0,     0.9}
+    {'p_a',                theta00(5),   0,     0.9}
     {'r_m' ,               theta00(6),   0,     1}
     {'E_0' ,               theta00(7),  ck0,    np}
     {'I_{m0}' ,            theta00(7),  ck0,    np}
@@ -152,7 +152,7 @@ for i=1:ncountry
     end  
     set(gca,'XTick',xtick,'XTickLabel',xticklabel,'XTickLabelRotation',45,'FontSize',24);
     xlabel('Date','FontSize',32);ylabel('Cases','FontSize',32);
-    title(name,'FontSize',44);
+    title(name,'FontSize',46);
     set(gcf,'unit','centimeters','position',[10 15 20 15]);
     %saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Manuscript/',[country,'FitWithE.png']]);
     
@@ -178,7 +178,7 @@ for i=1:ncountry
     end
     set(gca,'XTick',xtick,'XTickLabel',xticklabel,'XTickLabelRotation',45,'FontSize',24);
     xlabel('Date','FontSize',32);ylabel('Cases','FontSize',32);
-    title(name,'FontSize',44);
+    title(name,'FontSize',46);
     set(gcf,'unit','centimeters','position',[10 15 20 15]);
     saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Manuscript/',[country,'FitWithE.png']]);
 
@@ -202,7 +202,7 @@ for i=1:ncountry
     end
     set(gca,'XTick',xtick,'XTickLabel',xticklabel,'XTickLabelRotation',45,'FontSize',24);
     xlabel('Date','FontSize',32);ylabel('Cumulative cases','FontSize',32);
-    title(name,'FontSize',44);
+    title(name,'FontSize',46);
     set(gcf,'unit','centimeters','position',[10 15 20 15]);
     saveas(gcf,['/Users/Qing/Desktop/IDRC/Under-report/Manuscript/',[country,'C_IWithE.png']]);
     
